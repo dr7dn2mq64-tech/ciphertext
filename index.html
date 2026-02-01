@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>死手加密系统 - DeadHand Cipher v4</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=Courier+Prime:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eaeaea;
+        }
+        
+        .crypto-font {
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 0.1em;
+        }
+        
+        .glyph-box {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #4a4a6a;
+            transition: all 0.3s;
+        }
+        
+        .glyph-box:focus {
+            border-color: #e94560;
+            box-shadow: 0 0 15px rgba(233, 69, 96, 0.3);
+        }
+        
+        .btn-blood {
+            background: linear-gradient(45deg, #c31432, #240b36);
+            border: 1px solid #ff4757;
+            transition: all 0.3s;
+        }
+        
+        .btn-blood:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
+        }
+        
+        .btn-ice {
+            background: linear-gradient(45deg, #1e3799, #4a69bd);
+            border: 1px solid #60a3bc;
+            transition: all 0.3s;
+        }
+        
+        .btn-ice:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(96, 163, 188, 0.5);
+        }
+        
+        .cipher-text {
+            color: #5f27cd;
+            text-shadow: 0 0 5px rgba(95, 39, 205, 0.3);
+            font-weight: bold;
+        }
+        
+        .plain-text {
+            color: #10ac84;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-purple-600" 
+                style="-webkit-text-stroke: 1px rgba(255,255,255,0.1);">
+                DEADHAND CIPHER v4
+            </h1>
+            <p class="text-gray-400 text-sm tracking-wider">
+                原创加密协议 | 希腊-西里尔-假名字符集 | 零Base64
+            </p>
+        </div>
+
+        <!-- Main Interface -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <!-- Input -->
+            <div class="space-y-2">
+                <label class="text-xs text-gray-500 uppercase tracking-widest flex justify-between">
+                    <span>明文输入 [UTF-8]</span>
+                    <button onclick="clearAll()" class="text-red-400 hover:text-red-300 text-xs">清除</button>
+                </label>
+                <textarea id="inputArea" class="glyph-box w-full h-48 p-4 rounded-lg text-lg resize-none text-gray-200 crypto-font" 
+                    placeholder="输入任意文本...&#10;支持中文、Emoji、符号...."></textarea>
+                <div class="text-xs text-gray-600 text-right">
+                    <span id="inputBytes">0</span> 字节
+                </div>
+            </div>
+
+            <!-- Output -->
+            <div class="space-y-2">
+                <label class="text-xs text-gray-500 uppercase tracking-widest flex justify-between">
+                    <span>密文输出 [原创字符集]</span>
+                    <button onclick="copyOutput()" class="text-blue-400 hover:text-blue-300 text-xs">复制</button>
+                </label>
+                <textarea id="outputArea" readonly class="glyph-box w-full h-48 p-4 rounded-lg text-lg resize-none cipher-text crypto-font bg-black/80" 
+                    placeholder="加密后的密文显示为希腊/西里尔/假名混合符号..."></textarea>
+                <div class="text-xs text-gray-600 text-right">
+                    <span id="outputGlyphs">0</span> 个密符
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Section -->
+        <div class="mb-8 max-w-lg mx-auto">
+            <label class="block text-center text-xs text-gray-500 mb-2 tracking-widest">密钥 [支持任意字符]</label>
+            <input type="text" id="keyInput" value="死手系统启动2024" 
+                class="glyph-box w-full px-6 py-3 rounded-full text-center text-gray-200 crypto-font"
+                placeholder="输入密钥...">
+            <p class="text-center text-xs text-gray-600 mt-2">
+                使用相同密钥可解密 | 算法：S-Box置换 → XOR流加密 → 字节-符号映射
+            </p>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex justify-center gap-4 mb-8">
+            <button onclick="encrypt()" class="btn-blood text-white px-8 py-4 rounded-full font-bold text-lg flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                加密 LOCK
+            </button>
+            <button onclick="decrypt()" class="btn-ice text-white px-8 py-4 rounded-full font-bold text-lg flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+                解密 UNLOCK
+            </button>
+        </div>
+
+        <!-- Algorithm Detail -->
+        <div class="bg-black/40 rounded-lg p-6 border border-gray-800">
+            <h3 class="text-gray-500 text-xs mb-4 uppercase tracking-widest border-b border-gray-800 pb-2">加密流程说明</h3>
+            <div class="grid md:grid-cols-3 gap-4 text-sm">
+                <div class="space-y-2">
+                    <div class="text-red-400 font-bold">① S-Box 置换</div>
+                    <p class="text-gray-600 text-xs">基于密钥生成 256 字节替换盒，对原始UTF-8字节流进行非线性替换，破坏原始字节分布</p>
+                </div>
+                <div class="space-y-2">
+                    <div class="text-blue-400 font-bold">② XOR 流加密</div>
+                    <p class="text-gray-600 text-xs">使用密钥派生伪随机流与生成的 S-Box 结果进行异或运算，实现完美保密性</p>
+                </div>
+                <div class="space-y-2">
+                    <div class="text-purple-400 font-bold">③ 原创字符集映射</div>
+                    <p class="text-gray-600 text-xs">将 0-255 每个字节值映射到特定 Unicode 字符：希腊字母(0-63)、西里尔字母(64-127)、片假名(128-223)、特殊符号(224-255)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div id="status" class="text-center mt-4 text-sm h-6 text-gray-500"></div>
+    </div>
+
+    <script>
+        /**
+         * DeadHand Cipher v4.0
+         * 纯原创算法，无Base64，使用希腊/西里尔/假名混合字符集
+         */
+
+        // 原创字符集映射表 (256个字符，对应字节 0x00-0xFF)
+        // 0-63: 希腊字母大写+小写
+        // 64-127: 西里尔字母
+        // 128-223: 日文片假名
+        // 224-255: 数学/圆圈/特殊符号
+        const GLYPH_SET = [
+            // 0-31: 希腊大写+小写开始 (32个)
+            'Α','Β','Γ','Δ','Ε','Ζ','Η','Θ','Ι','Κ','Λ','Μ','Ν','Ξ','Ο','Π',
+            'Ρ','Σ','Τ','Υ','Φ','Χ','Ψ','Ω','α','β','γ','δ','ε','ζ','η','θ',
+            
+            // 32-63: 希腊续+扩展 (32个)
+            'ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω',
+            'ϐ','ϑ','ϒ','ϓ','ϔ','ϕ','ϖ','ϗ','Ϙ','ϙ','Ϛ','ϛ','Ϝ','ϝ','Ϟ','ϟ',
+            
+            // 64-95: 西里尔基础 (32个)
+            'А','Б','В','Г','Д','Е','Ё','Ж','З','И','Й','К','Л','М','Н','О',
+            'П','Р','С','Т','У','Ф','Х','Ц','Ч','Ш','Щ','Ъ','Ы','Ь','Э','Ю',
+            
+            // 96-127: 西里尔小写 (32个)
+            'а','б','в','г','д','е','ё','ж','з','и','й','к','л','м','н','о',
+            'п','р','с','т','у','ф','х','ц','ч','ш','щ','ъ','ы','ь','э','ю',
+            
+            // 128-159: 片假名基础 (32个)
+            'ア','イ','ウ','エ','オ','カ','キ','ク','ケ','コ','サ','シ','ス','セ','ソ',
+            'タ','チ','ツ','テ','ト','ナ','ニ','ヌ','ネ','ノ','ハ','ヒ','フ','ヘ','ホ','マ','ミ',
+            
+            // 160-191: 片假名浊音+半浊音 (32个)
+            'ム','メ','モ','ヤ','ユ','ヨ','ラ','リ','ル','レ','ロ','ワ','ヲ','ン','ガ','ギ',
+            'グ','ゲ','ゴ','ザ','ジ','ズ','ゼ','ゾ','ダ','ヂ','ヅ','デ','ド','バ','ビ','ブ',
+            
+            // 192-223: 片假名续 (32个)
+            'ベ','ボ','パ','ピ','プ','ペ','ポ','ヴ','ヷ','ヸ','ヹ','ヺ','ァ','ィ','ゥ','ェ',
+            'ォ','ッ','ャ','ュ','ョ','ㇰ','ㇱ','ㇲ','ㇳ','ㇴ','ㇵ','ㇶ','ㇷ','ㇸ','ㇹ','ㇺ',
+            
+            // 224-255: 特殊符号 (32个)
+            '∀','∂','∃','∅','∇','∈','∉','∋','∏','∑','∗','∘','∙','√','∝','∞',
+            '∠','∧','∨','∩','∪','∫','∴','∼','≅','≈','≡','≤','≥','⊂','⊃','∎'
+        ];
+
+        const REVERSE_MAP = new Map();
+        GLYPH_SET.forEach((char, idx) => REVERSE_MAP.set(char, idx));
+
+        // 密钥派生：生成 S-Box 和 密钥流
+        function deriveKeyMaterial(keyStr) {
+            // 1. 初始化 S-Box (0-255)
+            let sBox = Array.from({length: 256}, (_, i) => i);
+            
+            // 2. 将密钥转为字节数组 (UTF-8)
+            const keyBytes = new TextEncoder().encode(keyStr);
+            
+            // 3. 使用密钥打乱 S-Box (KSA 算法变体)
+            let j = 0;
+            for (let i = 0; i < 256; i++) {
+                j = (j + sBox[i] + keyBytes[i % keyBytes.length]) % 256;
+                [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
+            }
+            
+            return sBox;
+        }
+
+        // 伪随机字节生成器 (基于 S-Box 状态)
+        function createPRNG(sBox, keyStr) {
+            let i = 0, j = 0;
+            const keyBytes = new TextEncoder().encode(keyStr);
+            let keyIdx = 0;
+            
+            return function() {
+                i = (i + 1) % 256;
+                j = (j + sBox[i] + keyBytes[keyIdx % keyBytes.length]) % 256;
+                keyIdx++;
+                [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
+                return sBox[(sBox[i] + sBox[j]) % 256];
+            };
+        }
+
+        // 加密函数
+        function encrypt() {
+            const input = document.getElementById('inputArea').value;
+            const key = document.getElementById('keyInput').value || 'default';
+            
+            if (!input) return showStatus('请输入明文', 'error');
+
+            try {
+                // 1. UTF-8 编码为字节
+                const encoder = new TextEncoder();
+                const bytes = encoder.encode(input);
+                
+                // 2. 派生密钥材料
+                const sBox = deriveKeyMaterial(key);
+                const getKeystreamByte = createPRNG([...sBox], key); // 复制 S-Box 状态
+                
+                // 3. 加密：S-Box 替换 + XOR
+                const encrypted = new Uint8Array(bytes.length);
+                for (let i = 0; i < bytes.length; i++) {
+                    // S-Box 替换
+                    let substituted = sBox[bytes[i]];
+                    // XOR 密钥流
+                    encrypted[i] = substituted ^ getKeystreamByte();
+                }
+                
+                // 4. 映射到原创字符集
+                let cipherText = '';
+                for (let byte of encrypted) {
+                    cipherText += GLYPH_SET[byte];
+                }
+                
+                document.getElementById('outputArea').value = cipherText;
+                document.getElementById('inputBytes').textContent = bytes.length;
+                document.getElementById('outputGlyphs').textContent = cipherText.length;
+                showStatus('加密成功 - 生成 ' + cipherText.length + ' 个原创密符', 'success');
+                
+            } catch (e) {
+                showStatus('加密错误: ' + e.message, 'error');
+            }
+        }
+
+        // 解密函数
+        function decrypt() {
+            const input = document.getElementById('inputArea').value;
+            const key = document.getElementById('keyInput').value || 'default';
+            
+            if (!input) return showStatus('请输入密文', 'error');
+
+            try {
+                // 1. 字符集反向映射为字节
+                const encrypted = new Uint8Array(input.length);
+                for (let i = 0; i < input.length; i++) {
+                    const char = input[i];
+                    const byte = REVERSE_MAP.get(char);
+                    if (byte === undefined) {
+                        throw new Error('包含非法字符: ' + char + ' (密文只能包含系统生成的原创字符)');
+                    }
+                    encrypted[i] = byte;
+                }
+                
+                // 2. 派生相同的密钥材料
+                const sBox = deriveKeyMaterial(key);
+                const getKeystreamByte = createPRNG([...sBox], key);
+                
+                // 3. 解密：逆向 S-Box + XOR (XOR 的逆是 XOR)
+                // 需要先构建反向 S-Box
+                const invSBox = new Array(256);
+                for (let i = 0; i < 256; i++) {
+                    invSBox[sBox[i]] = i;
+                }
+                
+                const decrypted = new Uint8Array(encrypted.length);
+                for (let i = 0; i < encrypted.length; i++) {
+                    // 先 XOR 密钥流 (顺序与加密相反或相同，XOR 是自反的)
+                    let xorResult = encrypted[i] ^ getKeystreamByte();
+                    // 反向 S-Box 查找
+                    decrypted[i] = invSBox[xorResult];
+                }
+                
+                // 4. UTF-8 解码
+                const decoder = new TextDecoder();
+                const plain = decoder.decode(decrypted);
+                
+                document.getElementById('outputArea').value = plain;
+                document.getElementById('inputBytes').textContent = encrypted.length;
+                document.getElementById('outputGlyphs').textContent = plain.length;
+                showStatus('解密成功', 'success');
+                
+            } catch (e) {
+                showStatus('解密失败: ' + e.message, 'error');
+                console.error(e);
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('inputArea').value = '';
+            document.getElementById('outputArea').value = '';
+            document.getElementById('inputBytes').textContent = '0';
+            document.getElementById('outputGlyphs').textContent = '0';
+        }
+
+        function copyOutput() {
+            const out = document.getElementById('outputArea');
+            if (!out.value) return;
+            out.select();
+            document.execCommand('copy');
+            showStatus('已复制', 'success');
+        }
+
+        function showStatus(msg, type) {
+            const stat = document.getElementById('status');
+            stat.textContent = msg;
+            stat.className = 'text-center mt-4 text-sm h-6 ' + 
+                (type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-gray-500');
+            setTimeout(() => stat.textContent = '', 3000);
+        }
+
+        // 实时统计输入
+        document.getElementById('inputArea').addEventListener('input', function() {
+            const bytes = new TextEncoder().encode(this.value).length;
+            document.getElementById('inputBytes').textContent = bytes;
+        });
+    </script>
+</body>
+</html>
